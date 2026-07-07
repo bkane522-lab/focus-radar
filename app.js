@@ -4,6 +4,7 @@ const CATS = [
   { key:'reseaux',    label:'Réseaux',    icon:'📱', color:'#d16bd6' },
   { key:'telephone',  label:'Téléphone',  icon:'📞', color:'#4d8cff' },
   { key:'pause',      label:'Pause',      icon:'☕', color:'#e8c76a' },
+  { key:'admin',      label:'Admin',      icon:'📋', color:'#8b5cf6' },
   { key:'deplacement',label:'Déplacement',icon:'🚗', color:'#8b93a7' },
   { key:'lecture',    label:'Lecture',    icon:'📖', color:'#8b5cf6' },
   { key:'creatif',    label:'Créatif',    icon:'💡', color:'#8b5cf6' },
@@ -155,15 +156,16 @@ function drawGauge(canvas, score){
     ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
   }
 
-  // ambient dots
-  const dotSeed = [0.15,0.32,0.5,0.68,0.82,0.95];
+  // ambient dots — placed along the ring itself so they never collide with the center label
+  const dotSeed = [0.06,0.18,0.34,0.5,0.66,0.82];
+  const ringOffsets = [-7,5,-4,7,-6,4];
   dotSeed.forEach((f,i) => {
     const a = -Math.PI/2 + Math.PI*2*f;
-    const rr = r - 22 - (i%3)*8;
+    const rr = r + ringOffsets[i];
     const x = cx + Math.cos(a)*rr, y = cy + Math.sin(a)*rr;
     ctx.beginPath();
     ctx.arc(x,y, i%2===0?2.2:1.4, 0, Math.PI*2);
-    ctx.fillStyle = i < score/100*6 ? '#2fe0c8' : 'rgba(255,255,255,0.12)';
+    ctx.fillStyle = f <= score/100 ? '#2fe0c8' : 'rgba(255,255,255,0.14)';
     ctx.fill();
   });
 }
@@ -174,13 +176,18 @@ function renderHome(){
   const yest = entriesForDay(yestKey);
   const t = computeScore(today);
   const y = computeScore(yest);
+  const noHistory = entries.length === 0;
 
-  document.getElementById('scoreValue').textContent = t.score;
-  document.getElementById('scoreStatus').textContent = statusLabel(t.score);
-  const delta = t.score - y.score;
+  document.getElementById('scoreValue').textContent = noHistory ? '–' : t.score;
+  document.getElementById('scoreStatus').textContent = noHistory ? 'En attente' : statusLabel(t.score);
   const deltaEl = document.getElementById('scoreDelta');
-  deltaEl.textContent = (delta >= 0 ? '↑ +' : '↓ ') + delta + ' vs hier';
-  drawGauge(document.getElementById('radarGauge'), t.score);
+  if(noHistory){
+    deltaEl.textContent = 'Ajoute ta 1ère entrée';
+  } else {
+    const delta = t.score - y.score;
+    deltaEl.textContent = (delta >= 0 ? '↑ +' : '↓ ') + Math.abs(delta) + ' vs hier';
+  }
+  drawGauge(document.getElementById('radarGauge'), noHistory ? 0 : t.score);
 
   const h = Math.floor(t.focusMin/60), m = t.focusMin%60;
   document.getElementById('statFocus').textContent = `${h}h ${m}m`;
@@ -188,15 +195,36 @@ function renderHome(){
   document.getElementById('statPause').textContent = t.pauses;
   document.getElementById('statDeep').textContent = t.deepBlocks;
 
-  const focusDiff = y.focusMin ? Math.round((t.focusMin - y.focusMin)/Math.max(y.focusMin,1)*100) : (t.focusMin>0?100:0);
-  document.getElementById('statFocusTrend').textContent = (focusDiff>=0?'↑ ':'↓ ') + Math.abs(focusDiff) + '%';
-  const distDiff = t.distractions - y.distractions;
-  document.getElementById('statDistractTrend').textContent = (distDiff<=0?'↓ ':'↑ ') + Math.abs(distDiff);
-  document.getElementById('statPauseTrend').textContent = t.pauses + ' auj.';
-  document.getElementById('statDeepTrend').textContent = (t.deepBlocks - y.deepBlocks >= 0 ? '↑ ' : '↓ ') + Math.abs(t.deepBlocks - y.deepBlocks);
+  const focusTrendEl = document.getElementById('statFocusTrend');
+  if(t.focusMin === 0 && y.focusMin === 0){ focusTrendEl.textContent = '—'; focusTrendEl.className = 'stat-trend neutral'; }
+  else {
+    const focusDiff = y.focusMin ? Math.round((t.focusMin - y.focusMin)/y.focusMin*100) : 100;
+    focusTrendEl.textContent = (focusDiff>=0?'↑ ':'↓ ') + Math.abs(focusDiff) + '%';
+    focusTrendEl.className = 'stat-trend ' + (focusDiff>=0?'up':'down');
+  }
+
+  const distTrendEl = document.getElementById('statDistractTrend');
+  if(t.distractions === 0 && y.distractions === 0){ distTrendEl.textContent = '—'; }
+  else{
+    const distDiff = t.distractions - y.distractions;
+    distTrendEl.textContent = (distDiff<=0?'↓ ':'↑ ') + Math.abs(distDiff);
+  }
+
+  document.getElementById('statPauseTrend').textContent = t.pauses > 0 ? t.pauses + ' auj.' : '—';
+
+  const deepTrendEl = document.getElementById('statDeepTrend');
+  if(t.deepBlocks === 0 && y.deepBlocks === 0){ deepTrendEl.textContent = '—'; }
+  else{
+    const deepDiff = t.deepBlocks - y.deepBlocks;
+    deepTrendEl.textContent = (deepDiff >= 0 ? '↑ ' : '↓ ') + Math.abs(deepDiff);
+  }
 
   renderInsight(today, t);
 }
+
+document.getElementById('btn-trend').addEventListener('click', () => {
+  document.querySelector('.tab[data-target="view-radar"]').click();
+});
 
 /* ===================== INSIGHT (Groq via /api/insight) ===================== */
 async function renderInsight(dayEntries, scoreData){
@@ -260,15 +288,19 @@ let formCat = 'travail';
 let formMin = 5;
 let formMood = 'neutre';
 
-function renderDayStrip(container, activeKey){
+function renderDayStrip(container, activeKey, selectedKey, onSelect){
   container.innerHTML = '';
   const labels = ['DIM','LUN','MAR','MER','JEU','VEN','SAM'];
   for(let i=6;i>=0;i--){
     const d = new Date(Date.now() - i*86400000);
     const key = dayKey(d.getTime());
     const cell = document.createElement('div');
-    cell.className = 'day-cell' + (key===activeKey?' today':'');
+    let cls = 'day-cell';
+    if(key === activeKey) cls += ' today';
+    else if(key === selectedKey) cls += ' selected';
+    cell.className = cls;
     cell.innerHTML = `${labels[d.getDay()]}<span class="dnum">${d.getDate()}</span>`;
+    if(onSelect) cell.addEventListener('click', () => onSelect(key));
     container.appendChild(cell);
   }
 }
@@ -306,17 +338,29 @@ document.getElementById('btnSaveEntry').addEventListener('click', () => {
   addEntry({ cat: formCat, min: formMin, mood: formMood, note });
   document.getElementById('formNote').value = '';
   sessionStorage.removeItem(INSIGHT_KEY);
+  selectedJournalDay = todayKey();
   renderJournal();
 });
 
 function moodIcon(key){ return (MOODS.find(m=>m.key===key)||{}).icon || '😐'; }
 function catInfo(key){ return CATS.find(c=>c.key===key) || CATS[0]; }
 
+let selectedJournalDay = todayKey();
+
 function renderJournal(){
-  renderDayStrip(document.getElementById('dayStrip'), todayKey());
+  renderDayStrip(document.getElementById('dayStrip'), todayKey(), selectedJournalDay, (key) => {
+    selectedJournalDay = key;
+    renderJournal();
+  });
   const list = document.getElementById('entryList');
+  const listHead = document.querySelector('#view-journal .list-head span');
+  if(listHead){
+    listHead.textContent = selectedJournalDay === todayKey() ? 'Entrées récentes' : `Entrées du ${new Date(selectedJournalDay).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}`;
+  }
   list.innerHTML = '';
-  entries.slice(0,25).forEach(e => {
+  const dayEntries = entriesForDay(selectedJournalDay).sort((a,b)=>b.ts-a.ts);
+  const shown = selectedJournalDay === todayKey() ? entries.slice(0,25) : dayEntries;
+  shown.forEach(e => {
     const c = catInfo(e.cat);
     const row = document.createElement('div');
     row.className = 'entry-row';
@@ -332,8 +376,8 @@ function renderJournal(){
     `;
     list.appendChild(row);
   });
-  if(entries.length === 0){
-    list.innerHTML = '<div class="entry-row" style="justify-content:center;color:var(--text-dimmer);">Aucune entrée pour l\u2019instant</div>';
+  if(shown.length === 0){
+    list.innerHTML = '<div class="entry-row" style="justify-content:center;color:var(--text-dimmer);">Aucune entrée ce jour-là</div>';
   }
 }
 
@@ -461,13 +505,28 @@ function renderRadar(){
   });
 }
 
+document.getElementById('btn-analyze').addEventListener('click', (e) => {
+  const btn = e.currentTarget;
+  btn.classList.add('pulsing');
+  renderRadar();
+  setTimeout(() => btn.classList.remove('pulsing'), 600);
+});
+
 /* ===================== PLAN ADAPTATIF ===================== */
 const BLOCK_TEMPLATES = [
-  { icon:'🧠', title:'Travail profond', sub:'Focus profond', diff:4, start:9, dur:120 },
-  { icon:'▤', title:'Administratif', sub:'Tâches légères', diff:2, start:11.25, dur:60 },
-  { icon:'💡', title:'Session créative', sub:'Idées & création', diff:3, start:14, dur:90 },
-  { icon:'🌿', title:'Pause récupération', sub:'Recharge active', diff:1, start:16.5, dur:20 },
+  { icon:'🧠', title:'Travail profond', sub:'Focus profond', diff:4, start:9, dur:120, cat:'travail' },
+  { icon:'▤', title:'Administratif', sub:'Tâches légères', diff:2, start:11.25, dur:60, cat:'admin' },
+  { icon:'💡', title:'Session créative', sub:'Idées & création', diff:3, start:14, dur:90, cat:'creatif' },
+  { icon:'🌿', title:'Pause récupération', sub:'Recharge active', diff:1, start:16.5, dur:20, cat:'pause' },
 ];
+const HIDDEN_BLOCKS_KEY = 'focusradar_hidden_blocks_v1';
+const DONE_BLOCKS_KEY = 'focusradar_done_blocks_v1';
+
+function loadJSON(key){ try{ return JSON.parse(localStorage.getItem(key)) || {}; }catch(e){ return {}; } }
+function saveJSON(key, obj){ localStorage.setItem(key, JSON.stringify(obj)); }
+
+let planEditMode = false;
+let selectedPlanDay = todayKey();
 
 function fmtTime(hFloat){
   const h = Math.floor(hFloat);
@@ -476,7 +535,10 @@ function fmtTime(hFloat){
 }
 
 function renderPlan(){
-  renderDayStrip(document.getElementById('planDayStrip'), todayKey());
+  renderDayStrip(document.getElementById('planDayStrip'), todayKey(), selectedPlanDay, (key) => {
+    selectedPlanDay = key;
+    renderPlan();
+  });
 
   // shift creative/heavy blocks away from detected distraction peak hour
   const cutoff = Date.now() - 14*86400000;
@@ -484,16 +546,29 @@ function renderPlan(){
   entries.filter(e => e.ts >= cutoff && DISTRACT_CATS.includes(e.cat)).forEach(e => buckets[new Date(e.ts).getHours()]++);
   const peakHour = Math.max(...buckets) > 0 ? buckets.indexOf(Math.max(...buckets)) : null;
 
+  const hiddenMap = loadJSON(HIDDEN_BLOCKS_KEY);
+  const doneMap = loadJSON(DONE_BLOCKS_KEY);
+  const hiddenForDay = hiddenMap[selectedPlanDay] || [];
+  const doneForDay = doneMap[selectedPlanDay] || [];
+  const dayEntries = entriesForDay(selectedPlanDay);
+
   const list = document.getElementById('planList');
   list.innerHTML = '';
-  BLOCK_TEMPLATES.forEach(b => {
+
+  BLOCK_TEMPLATES.forEach((b, idx) => {
+    if(hiddenForDay.includes(idx)) return;
+
     let start = b.start;
     if(peakHour !== null && Math.abs(start - peakHour) < 1 && b.diff >= 3){
       start = peakHour - 2 >= 8 ? peakHour - 2 : peakHour + 3;
     }
     const end = start + b.dur/60;
+
+    const loggedMatch = dayEntries.some(e => e.cat === b.cat && e.min >= Math.min(15, b.dur*0.3));
+    const isDone = doneForDay.includes(idx) || loggedMatch;
+
     const row = document.createElement('div');
-    row.className = 'plan-row';
+    row.className = 'plan-row' + (isDone ? ' done' : '');
     const dots = Array.from({length:5}, (_,i) => `<span class="${i < b.diff ? 'on':''}"></span>`).join('');
     row.innerHTML = `
       <div class="plan-ic">${b.icon}</div>
@@ -503,9 +578,32 @@ function renderPlan(){
         <div class="plan-sub">${b.sub}</div>
         <div class="plan-dots">${dots}</div>
       </div>
+      ${planEditMode ? '<button class="plan-remove" aria-label="Retirer">×</button>' : ''}
     `;
+
+    if(planEditMode){
+      row.querySelector('.plan-remove').addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        const map = loadJSON(HIDDEN_BLOCKS_KEY);
+        map[selectedPlanDay] = [...(map[selectedPlanDay]||[]), idx];
+        saveJSON(HIDDEN_BLOCKS_KEY, map);
+        renderPlan();
+      });
+    } else {
+      row.addEventListener('click', () => {
+        const map = loadJSON(DONE_BLOCKS_KEY);
+        const cur = map[selectedPlanDay] || [];
+        map[selectedPlanDay] = cur.includes(idx) ? cur.filter(i=>i!==idx) : [...cur, idx];
+        saveJSON(DONE_BLOCKS_KEY, map);
+        renderPlan();
+      });
+    }
     list.appendChild(row);
   });
+
+  if(hiddenForDay.length === BLOCK_TEMPLATES.length){
+    list.innerHTML = '<div class="plan-row" style="justify-content:center;color:var(--text-dimmer);">Tous les blocs ont été retirés pour ce jour</div>';
+  }
 
   const adjustText = document.getElementById('adjustText');
   if(peakHour !== null){
@@ -528,7 +626,31 @@ function renderPlan(){
 }
 
 document.getElementById('btnLaunchBlock').addEventListener('click', () => {
-  document.querySelector('.tab[data-target="view-journal"]').click();
+  // find the block whose time window contains (or is nearest to) the current moment
+  const now = new Date();
+  const nowFloat = now.getHours() + now.getMinutes()/60;
+  let best = BLOCK_TEMPLATES[0], bestDiff = Infinity;
+  BLOCK_TEMPLATES.forEach(b => {
+    const diff = Math.abs(b.start - nowFloat);
+    if(diff < bestDiff){ bestDiff = diff; best = b; }
+  });
+  quickCat = best.cat;
+  quickMin = best.dur >= 60 ? 60 : (best.dur >= 30 ? 30 : 15);
+  document.querySelector('.tab[data-target="view-home"]').click();
+  // reflect the pre-selected category/duration visually once Home is rendered
+  setTimeout(() => {
+    const catBtn = [...quickCatsEl.querySelectorAll('button')].find(b => b.textContent.includes(catInfo(quickCat).label));
+    if(catBtn) selectChip(quickCatsEl, 'active', catBtn);
+    const durBtn = [...document.querySelectorAll('#quickDur .dur-chip')].find(b => parseInt(b.dataset.min,10) === quickMin);
+    if(durBtn){ document.querySelectorAll('#quickDur .dur-chip').forEach(b=>b.classList.remove('active')); durBtn.classList.add('active'); }
+  }, 0);
+});
+
+document.getElementById('btnEditPlan').addEventListener('click', (e) => {
+  planEditMode = !planEditMode;
+  e.currentTarget.textContent = planEditMode ? '✓ Terminé' : '✎ Modifier';
+  e.currentTarget.classList.toggle('active', planEditMode);
+  renderPlan();
 });
 
 /* ===================== INIT ===================== */

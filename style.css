@@ -107,9 +107,11 @@ h1{font-size:17px; margin:0; font-weight:700; letter-spacing:-0.2px;}
 
 /* ===== quick add ===== */
 .quick-add-label{font-size:9.5px; letter-spacing:1px; color:var(--text-dimmer); flex-shrink:0; margin-top:2px;}
-.chip-row{display:flex; gap:6px; overflow-x:auto; flex-shrink:0; scrollbar-width:none;}
+.chip-row{display:flex; gap:6px; overflow-x:auto; flex-shrink:0; scrollbar-width:none;
+  -webkit-mask-image:linear-gradient(to right, black 90%, transparent 100%);
+  mask-image:linear-gradient(to right, black 90%, transparent 100%);}
 .chip-row::-webkit-scrollbar{display:none;}
-.chip-row.wrap{flex-wrap:wrap; overflow:visible;}
+.chip-row.wrap{flex-wrap:wrap; overflow:visible; -webkit-mask-image:none; mask-image:none;}
 .cat-chip, .dur-chip, .mood-chip{
   flex-shrink:0;
   background:var(--card); border:1px solid var(--line); color:var(--text);
@@ -161,6 +163,9 @@ h1{font-size:17px; margin:0; font-weight:700; letter-spacing:-0.2px;}
 .day-cell .dnum{display:block; font-size:13px; font-weight:800; color:var(--text); margin-top:1px;}
 .day-cell.today{border-color:var(--teal); color:var(--teal);}
 .day-cell.today .dnum{color:var(--teal);}
+.day-cell.selected{border-color:var(--blue); color:var(--blue); background:rgba(77,140,255,0.10);}
+.day-cell.selected .dnum{color:var(--blue);}
+.day-cell{cursor:pointer;}
 
 .entry-form{
   background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
@@ -236,6 +241,29 @@ h1{font-size:17px; margin:0; font-weight:700; letter-spacing:-0.2px;}
 
 .three-col{display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; flex-shrink:0;}
 .three-col .mini-card{align-items:center; text-align:center;}
+
+.cta-row{display:flex; gap:8px; flex-shrink:0;}
+.cta-row .cta{flex:2; margin:0;}
+.btn-outline{
+  flex:1; background:var(--card); border:1px solid var(--line); color:var(--text);
+  border-radius:16px; font-size:13px; font-weight:700;
+}
+.btn-outline.active{border-color:var(--gold); color:var(--gold); background:rgba(232,199,106,0.08);}
+
+.plan-row{position:relative; transition:opacity 0.2s;}
+.plan-row.done{opacity:0.55; border-color:var(--teal);}
+.plan-row.done .plan-title::after{content:' ✓'; color:var(--teal);}
+.plan-remove{
+  width:24px; height:24px; border-radius:50%; flex-shrink:0;
+  background:rgba(255,255,255,0.08); color:#fff; border:none; font-size:13px;
+}
+
+.icon-btn{transition:box-shadow 0.3s, border-color 0.3s;}
+.icon-btn.pulsing{
+  border-color:var(--teal);
+  box-shadow:0 0 14px rgba(47,224,200,0.7);
+}
+
 
 /* ===== tabbar ===== */
 .tabbar{
