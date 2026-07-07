@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0e1a">
+<title>Focus Radar</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ===== ACCUEIL ===== -->
+  <section class="view" id="view-home" data-view>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-icon">◎</span>
+        <div>
+          <h1>Focus Radar</h1>
+          <p class="tagline">Suivi intelligent. Meilleures habitudes.</p>
+        </div>
+      </div>
+      <button class="icon-btn" id="btn-trend" aria-label="Tendance">〜</button>
+    </header>
+
+    <div class="radar-wrap">
+      <canvas id="radarGauge" width="280" height="280"></canvas>
+      <div class="radar-center">
+        <span class="rc-label">SCORE DE FOCUS</span>
+        <span class="rc-score" id="scoreValue">--</span>
+        <span class="rc-status" id="scoreStatus">—</span>
+        <span class="rc-delta" id="scoreDelta"></span>
+      </div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <span class="stat-ic">⏱</span>
+        <span class="stat-num" id="statFocus">0h 0m</span>
+        <span class="stat-lbl">Focus total</span>
+        <span class="stat-trend up" id="statFocusTrend"></span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-ic">🔕</span>
+        <span class="stat-num" id="statDistract">0</span>
+        <span class="stat-lbl">Distractions</span>
+        <span class="stat-trend down" id="statDistractTrend"></span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-ic">☕</span>
+        <span class="stat-num" id="statPause">0</span>
+        <span class="stat-lbl">Micro-pauses</span>
+        <span class="stat-trend neutral" id="statPauseTrend"></span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-ic">◎</span>
+        <span class="stat-num" id="statDeep">0</span>
+        <span class="stat-lbl">Blocs deep work</span>
+        <span class="stat-trend up" id="statDeepTrend"></span>
+      </div>
+    </div>
+
+    <div class="quick-add-label">AJOUT RAPIDE</div>
+    <div class="chip-row" id="quickCats"></div>
+
+    <div class="dur-row" id="quickDur">
+      <button class="dur-chip" data-min="5">5 min</button>
+      <button class="dur-chip active" data-min="15">15 min</button>
+      <button class="dur-chip" data-min="30">30 min</button>
+      <button class="dur-chip" data-min="60">1h</button>
+    </div>
+
+    <button class="cta" id="btnQuickAdd">⚡ Ajouter en 2 sec</button>
+
+    <div class="insight-card" id="insightCard">
+      <div class="insight-head">
+        <span class="spark">✦</span>
+        <span>Insight IA</span>
+      </div>
+      <h3 id="insightTitle">Analyse en cours…</h3>
+      <p id="insightBody">Ajoute quelques entrées pour débloquer ton premier insight.</p>
+      <button class="link-btn" id="btnRefreshInsight">Actualiser →</button>
+    </div>
+  </section>
+
+  <!-- ===== JOURNAL ===== -->
+  <section class="view hidden" id="view-journal" data-view>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-icon">◎</span>
+        <div>
+          <h1>Journal rapide</h1>
+          <p class="tagline">Suivi discret, impact durable.</p>
+        </div>
+      </div>
+    </header>
+
+    <div class="day-strip" id="dayStrip"></div>
+
+    <div class="entry-form">
+      <p class="form-step">1. Que faisais-tu ?</p>
+      <div class="chip-row" id="formCats"></div>
+
+      <p class="form-step">2. Combien de temps ?</p>
+      <div class="dur-row" id="formDur">
+        <button class="dur-chip active" data-min="5">5 min</button>
+        <button class="dur-chip" data-min="15">15 min</button>
+        <button class="dur-chip" data-min="30">30 min</button>
+        <button class="dur-chip" data-min="60">1h</button>
+      </div>
+
+      <p class="form-step">3. Comment te sens-tu ?</p>
+      <div class="mood-row" id="formMood"></div>
+
+      <textarea id="formNote" maxlength="120" placeholder="Ajoute un contexte, une pensée…"></textarea>
+      <button class="cta" id="btnSaveEntry">⚡ Enregistrer</button>
+    </div>
+
+    <div class="list-head">
+      <span>Entrées récentes</span>
+    </div>
+    <div class="entry-list" id="entryList"></div>
+  </section>
+
+  <!-- ===== RADAR IA ===== -->
+  <section class="view hidden" id="view-radar" data-view>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-icon">◎</span>
+        <div>
+          <h1>Radar IA</h1>
+          <p class="tagline">Analyse intelligente de vos distractions.</p>
+        </div>
+      </div>
+      <button class="icon-btn" id="btn-analyze" aria-label="Analyser">✦</button>
+    </header>
+
+    <div class="heatmap-wrap">
+      <canvas id="heatCanvas" width="280" height="220"></canvas>
+    </div>
+
+    <div class="two-col">
+      <div class="mini-card">
+        <span class="mini-ic">⏱</span>
+        <span class="mini-lbl">Fenêtre récurrente</span>
+        <span class="mini-val" id="radWindow">—</span>
+        <span class="mini-sub" id="radWindowSub"></span>
+      </div>
+      <div class="mini-card">
+        <span class="mini-ic">🖥</span>
+        <span class="mini-lbl">Contexte fréquent</span>
+        <span class="mini-val" id="radContext">—</span>
+        <span class="mini-sub" id="radContextSub"></span>
+      </div>
+      <div class="mini-card">
+        <span class="mini-ic">🧠</span>
+        <span class="mini-lbl">Déclencheur estimé</span>
+        <span class="mini-val" id="radTrigger">—</span>
+        <span class="mini-sub" id="radTriggerSub"></span>
+      </div>
+      <div class="mini-card">
+        <span class="mini-ic">◎</span>
+        <span class="mini-lbl">Action recommandée</span>
+        <span class="mini-val" id="radAction">—</span>
+        <span class="mini-sub" id="radActionSub"></span>
+      </div>
+    </div>
+
+    <div class="chip-row wrap" id="radPatterns"></div>
+
+    <div class="week-card">
+      <div class="week-head">
+        <span>Évolution du focus (7j)</span>
+        <span class="week-avg" id="weekAvg">— </span>
+      </div>
+      <canvas id="weekChart" width="280" height="90"></canvas>
+    </div>
+  </section>
+
+  <!-- ===== PLAN / PROFIL ===== -->
+  <section class="view hidden" id="view-profile" data-view>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-icon">◎</span>
+        <div>
+          <h1>Plan adaptatif</h1>
+          <p class="tagline">S'adapte à ton énergie et tes habitudes.</p>
+        </div>
+      </div>
+    </header>
+
+    <div class="day-strip" id="planDayStrip"></div>
+
+    <div class="plan-list" id="planList"></div>
+
+    <div class="adjust-note" id="adjustNote">
+      <span class="spark">✦</span>
+      <div>
+        <strong>Ajusté pour toi</strong>
+        <p id="adjustText">L'IA n'a pas encore assez de données pour ajuster ton plan.</p>
+      </div>
+    </div>
+
+    <div class="three-col">
+      <div class="mini-card">
+        <span class="mini-lbl">Cohérence</span>
+        <span class="mini-val" id="planCoherence">—</span>
+      </div>
+      <div class="mini-card">
+        <span class="mini-lbl">Série</span>
+        <span class="mini-val" id="planStreak">—</span>
+      </div>
+      <div class="mini-card">
+        <span class="mini-lbl">Meilleur créneau</span>
+        <span class="mini-val" id="planBest">—</span>
+      </div>
+    </div>
+
+    <button class="cta" id="btnLaunchBlock">⚡ Lancer un bloc</button>
+  </section>
+
+  <!-- BOTTOM NAV -->
+  <nav class="tabbar">
+    <button class="tab active" data-target="view-home"><span>⌂</span>Accueil</button>
+    <button class="tab" data-target="view-journal"><span>▤</span>Journal</button>
+    <button class="tab" data-target="view-radar"><span>◎</span>Radar</button>
+    <button class="tab" data-target="view-profile"><span>☺</span>Profil</button>
+  </nav>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
