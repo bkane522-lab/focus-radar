@@ -128,7 +128,7 @@ function drawGauge(canvas, score){
   // background ring
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI*2);
-  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.strokeStyle = 'rgba(28,35,51,0.08)';
   ctx.lineWidth = 10;
   ctx.stroke();
 
@@ -136,8 +136,8 @@ function drawGauge(canvas, score){
   const start = -Math.PI/2;
   const end = start + (Math.PI*2)*(score/100);
   const grad = ctx.createLinearGradient(0,0,size,size);
-  grad.addColorStop(0, '#2fe0c8');
-  grad.addColorStop(0.6, '#4d8cff');
+  grad.addColorStop(0, '#2dd4bf');
+  grad.addColorStop(0.6, '#3b82f6');
   grad.addColorStop(1, '#8b5cf6');
   ctx.beginPath();
   ctx.arc(cx, cy, r, start, end);
@@ -147,7 +147,7 @@ function drawGauge(canvas, score){
   ctx.stroke();
 
   // tick marks
-  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.strokeStyle = 'rgba(28,35,51,0.14)';
   ctx.lineWidth = 1.5;
   for(let i=0;i<12;i++){
     const a = (Math.PI*2/12)*i;
@@ -165,7 +165,7 @@ function drawGauge(canvas, score){
     const x = cx + Math.cos(a)*rr, y = cy + Math.sin(a)*rr;
     ctx.beginPath();
     ctx.arc(x,y, i%2===0?2.2:1.4, 0, Math.PI*2);
-    ctx.fillStyle = f <= score/100 ? '#2fe0c8' : 'rgba(255,255,255,0.14)';
+    ctx.fillStyle = f <= score/100 ? '#14b8a6' : 'rgba(28,35,51,0.12)';
     ctx.fill();
   });
 }
@@ -392,7 +392,7 @@ function drawHeatmap(canvas){
   const cx = w/2, cy = h/2, r = Math.min(w,h)/2 - 14;
 
   // grid circles
-  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.strokeStyle = 'rgba(28,35,51,0.07)';
   ctx.lineWidth = 1;
   [0.33,0.66,1].forEach(f => { ctx.beginPath(); ctx.arc(cx,cy,r*f,0,Math.PI*2); ctx.stroke(); });
 
@@ -413,8 +413,8 @@ function drawHeatmap(canvas){
     const intensity = val/max;
     const radius = 6 + intensity*16;
     const grad = ctx.createRadialGradient(x,y,0,x,y,radius);
-    const color = intensity > 0.6 ? '139,92,246' : intensity > 0.3 ? '77,140,255' : '47,224,200';
-    grad.addColorStop(0, `rgba(${color},0.75)`);
+    const color = intensity > 0.6 ? '139,92,246' : intensity > 0.3 ? '59,130,246' : '20,184,166';
+    grad.addColorStop(0, `rgba(${color},0.55)`);
     grad.addColorStop(1, `rgba(${color},0)`);
     ctx.beginPath();
     ctx.arc(x,y,radius,0,Math.PI*2);
@@ -423,7 +423,7 @@ function drawHeatmap(canvas){
   }
 
   // hour labels
-  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.fillStyle = 'rgba(28,35,51,0.4)';
   ctx.font = '9px -apple-system, sans-serif';
   ctx.fillText('00:00', cx-14, cy-r-4);
   ctx.fillText('12:00', cx-14, cy+r+12);
@@ -453,12 +453,12 @@ function drawWeekChart(canvas){
     const bh = Math.max(4, (d.score/100) * (h-14));
     const y = h - bh - 12;
     const grad = ctx.createLinearGradient(0,y,0,y+bh);
-    grad.addColorStop(0, '#8b5cf6'); grad.addColorStop(1, '#2fe0c8');
+    grad.addColorStop(0, '#8b5cf6'); grad.addColorStop(1, '#2dd4bf');
     ctx.fillStyle = grad;
     ctx.beginPath();
     ctx.roundRect ? ctx.roundRect(x,y,barW,bh,3) : ctx.rect(x,y,barW,bh);
     ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.fillStyle = 'rgba(28,35,51,0.45)';
     ctx.font = '9px -apple-system, sans-serif';
     ctx.fillText(d.label, x+barW/2-3, h-2);
   });
